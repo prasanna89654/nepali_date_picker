@@ -4,6 +4,8 @@
 
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -330,19 +332,19 @@ class _DatePickerDialogState extends State<_DatePickerDialog> {
     final textTheme = theme.textTheme;
     // Constrain the textScaleFactor to the largest supported value to prevent
     // layout issues.
-    final textScaler =
-        MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.3);
+    final textScaleFactor =
+        math.min(MediaQuery.of(context).textScaleFactor, 1.3);
 
     final dateText = NepaliDateFormat(NepaliUtils().language == Language.english
-            ? 'EE, MMMM d'
+            ? 'EE, MMM d'
             : 'EE, MMMM d')
         .format(_selectedDate);
     final onPrimarySurface = colorScheme.brightness == Brightness.light
         ? colorScheme.onPrimary
         : colorScheme.onSurface;
     final dateStyle = orientation == Orientation.landscape
-        ? textTheme.headlineSmall?.copyWith(color: onPrimarySurface)
-        : textTheme.headlineMedium?.copyWith(color: onPrimarySurface);
+        ? textTheme.headline5?.copyWith(color: onPrimarySurface)
+        : textTheme.headline4?.copyWith(color: onPrimarySurface);
 
     final Widget actions = Container(
       alignment: AlignmentDirectional.centerEnd,
@@ -462,8 +464,7 @@ class _DatePickerDialogState extends State<_DatePickerDialog> {
       entryModeButton: entryModeButton,
     );
 
-    // ignore: deprecated_member_use
-    final dialogSize = _dialogSize(context) * textScaler.textScaleFactor;
+    final dialogSize = _dialogSize(context) * textScaleFactor;
     return Dialog(
       child: AnimatedContainer(
         width: dialogSize.width,
@@ -471,7 +472,9 @@ class _DatePickerDialogState extends State<_DatePickerDialog> {
         duration: _dialogSizeAnimationDuration,
         curve: Curves.easeIn,
         child: MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+          data: MediaQuery.of(context).copyWith(
+            textScaleFactor: textScaleFactor,
+          ),
           child: Builder(
             builder: (BuildContext context) {
               switch (orientation) {
@@ -587,7 +590,7 @@ class DatePickerHeader extends StatelessWidget {
     final onPrimarySurfaceColor =
         isDark ? colorScheme.onSurface : colorScheme.onPrimary;
 
-    final helpStyle = textTheme.labelSmall?.copyWith(
+    final helpStyle = textTheme.overline?.copyWith(
       color: onPrimarySurfaceColor,
     );
 
@@ -956,7 +959,7 @@ class _DateRangePickerDialogState extends State<_DateRangePickerDialog> {
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final orientation = mediaQuery.orientation;
-    final textScaler = mediaQuery.textScaler.clamp(maxScaleFactor: 1.3);
+    final textScaleFactor = math.min(mediaQuery.textScaleFactor, 1.3);
     final localizations = MaterialLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
     final onPrimarySurface = colors.brightness == Brightness.light
@@ -1073,7 +1076,9 @@ class _DateRangePickerDialogState extends State<_DateRangePickerDialog> {
         duration: _dialogSizeAnimationDuration,
         curve: Curves.easeIn,
         child: MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+          data: MediaQuery.of(context).copyWith(
+            textScaleFactor: textScaleFactor,
+          ),
           child: Builder(builder: (BuildContext context) {
             return contents;
           }),
@@ -1132,7 +1137,7 @@ class _CalendarRangePickerDialog extends StatelessWidget {
         localizations, selectedStartDate, selectedEndDate);
     final endDateText = utils.formatRangeEndDate(localizations,
         selectedStartDate, selectedEndDate, NepaliDateTime.now());
-    final headlineStyle = textTheme.headlineSmall;
+    final headlineStyle = textTheme.headline5;
     final startDateStyle = headlineStyle?.apply(
         color: selectedStartDate != null
             ? headerForeground
@@ -1141,7 +1146,7 @@ class _CalendarRangePickerDialog extends StatelessWidget {
         color: selectedEndDate != null
             ? headerForeground
             : headerDisabledForeground);
-    final saveButtonStyle = textTheme.labelLarge?.apply(
+    final saveButtonStyle = textTheme.button?.apply(
         color: onConfirm != null ? headerForeground : headerDisabledForeground);
 
     return SafeArea(
@@ -1175,7 +1180,7 @@ class _CalendarRangePickerDialog extends StatelessWidget {
                     children: <Widget>[
                       Text(
                         helpText,
-                        style: textTheme.labelSmall!.apply(
+                        style: textTheme.overline!.apply(
                           color: headerForeground,
                         ),
                       ),
@@ -1661,7 +1666,7 @@ class _DayHeaders extends StatelessWidget {
     final themeData = Theme.of(context);
     final colorScheme = themeData.colorScheme;
     final textStyle =
-        themeData.textTheme.titleSmall!.apply(color: colorScheme.onSurface);
+        themeData.textTheme.subtitle2!.apply(color: colorScheme.onSurface);
     final localizations = MaterialLocalizations.of(context);
     final labels = _getDayHeaders(textStyle, localizations);
 
@@ -1816,6 +1821,7 @@ class _MonthItem extends StatefulWidget {
     required this.firstDate,
     required this.lastDate,
     required this.displayedMonth,
+    this.dragStartBehavior = DragStartBehavior.start,
   })  : assert(!firstDate.isAfter(lastDate)),
         assert(selectedDateStart == null ||
             !selectedDateStart.isBefore(firstDate)),
@@ -1852,6 +1858,25 @@ class _MonthItem extends StatefulWidget {
 
   /// The month whose days are displayed by this picker.
   final NepaliDateTime displayedMonth;
+
+  /// Determines the way that drag start behavior is handled.
+  ///
+  /// If set to [DragStartBehavior.start], the drag gesture used to scroll a
+  /// date picker wheel will begin upon the detection of a drag gesture. If set
+  /// to [DragStartBehavior.down] it will begin when a down event is first
+  /// detected.
+  ///
+  /// In general, setting this to [DragStartBehavior.start] will make drag
+  /// animation smoother and setting it to [DragStartBehavior.down] will make
+  /// drag behavior feel slightly more reactive.
+  ///
+  /// By default, the drag start behavior is [DragStartBehavior.start].
+  ///
+  /// See also:
+  ///
+  ///  * [DragGestureRecognizer.dragStartBehavior], which gives an example for
+  ///    the different behaviors.
+  final DragStartBehavior dragStartBehavior;
 
   @override
   _MonthItemState createState() => _MonthItemState();
@@ -1933,7 +1958,7 @@ class _MonthItemState extends State<_MonthItem> {
         dayToBuild.isBefore(widget.firstDate);
 
     BoxDecoration? decoration;
-    var itemStyle = textTheme.bodyMedium;
+    var itemStyle = textTheme.bodyText2;
 
     final isRangeSelected =
         widget.selectedDateStart != null && widget.selectedDateEnd != null;
@@ -1954,7 +1979,7 @@ class _MonthItemState extends State<_MonthItem> {
     if (isSelectedDayStart || isSelectedDayEnd) {
       // The selected start and end dates gets a circle background
       // highlight, and a contrasting text color.
-      itemStyle = textTheme.bodyMedium?.apply(color: colorScheme.onPrimary);
+      itemStyle = textTheme.bodyText2?.apply(color: colorScheme.onPrimary);
       decoration = BoxDecoration(
         color: colorScheme.primary,
         shape: BoxShape.circle,
@@ -1979,12 +2004,12 @@ class _MonthItemState extends State<_MonthItem> {
         textDirection: textDirection,
       );
     } else if (isDisabled) {
-      itemStyle = textTheme.bodyMedium
+      itemStyle = textTheme.bodyText2
           ?.apply(color: colorScheme.onSurface.withOpacity(0.38));
     } else if (utils.isSameDay(widget.currentDate, dayToBuild)) {
       // The current day gets a different text color and a circle stroke
       // border.
-      itemStyle = textTheme.bodyMedium?.apply(color: colorScheme.primary);
+      itemStyle = textTheme.bodyText2?.apply(color: colorScheme.primary);
       decoration = BoxDecoration(
         border: Border.all(color: colorScheme.primary, width: 1),
         shape: BoxShape.circle,
@@ -2135,7 +2160,7 @@ class _MonthItemState extends State<_MonthItem> {
           child: ExcludeSemantics(
             child: Text(
               NepaliDateFormat.yMMMM().format(widget.displayedMonth),
-              style: textTheme.bodyMedium!
+              style: textTheme.bodyText2!
                   .apply(color: themeData.colorScheme.onSurface),
             ),
           ),
@@ -2289,8 +2314,8 @@ class _InputDateRangePickerDialog extends StatelessWidget {
         ? colorScheme.onPrimary
         : colorScheme.onSurface;
     final dateStyle = orientation == Orientation.landscape
-        ? textTheme.headlineSmall?.apply(color: dateColor)
-        : textTheme.headlineMedium?.apply(color: dateColor);
+        ? textTheme.headline5?.apply(color: dateColor)
+        : textTheme.headline4?.apply(color: dateColor);
     final dateText = _formatDateRange(
         context, selectedStartDate, selectedEndDate, currentDate!);
     final semanticDateText = selectedStartDate != null &&

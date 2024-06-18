@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:nepali_date_picker/nepali_date_picker.dart';
+import 'package:nepali_utils/nepali_utils.dart';
 
 import 'date_picker_common.dart' as common;
 import 'date_utils.dart' as utils;
@@ -151,7 +153,7 @@ class _InputDatePickerFormFieldState extends State<InputDatePickerFormField> {
     super.didUpdateWidget(oldWidget);
     if (widget.initialDate != oldWidget.initialDate) {
       // Can't update the form field in the middle of a build, so do it next frame
-      WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) {
+      WidgetsBinding.instance!.addPostFrameCallback((Duration timeStamp) {
         setState(() {
           _selectedDate = widget.initialDate;
           _updateValueForSelectedDate();
@@ -213,7 +215,7 @@ class _InputDatePickerFormFieldState extends State<InputDatePickerFormField> {
           MaterialLocalizations.of(context).dateOutOfRangeLabel;
     } else if (!_isDayInMonth(date)) {
       // TODO: Localize the text.
-      return 'Invalid Day.';
+      return 'Invalid Day';
     }
     return null;
   }
